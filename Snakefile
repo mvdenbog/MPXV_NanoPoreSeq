@@ -5,16 +5,25 @@ REF, = glob_wildcards("/data/{ref}.fasta")
 
 rule all:
      input:
+         canu_fastmer=expand("/data/{wf}_canu_d/{wf}_canu_fastmer.txt", wf=WORKFLOW),
          canu_homopolish=expand("/data/{wf}_canu_d/homopolish_output/{wf}_canu_homopolished_fastmer.txt", wf=WORKFLOW),
          raconfasta=expand("/data/{wf}_Racon/reads.racon2.fasta", wf=WORKFLOW),
-         racon_medaka_homopolish=expand("/data/{wf}_RaconMedakaHomopolish/homopolish_output/consensus_homopolished.fasta.txt", wf=WORKFLOW),
-         canu_medaka_homopolish=expand("/data/{wf}_canu_d/Medaka/homopolish_output/consensus_homopolished.fasta.txt", wf=WORKFLOW),
+         racon_medaka_homopolish=expand("/data/{wf}_RaconMedakaHomopolish/homopolish_output/consensus_canu_racon_medaka_homopolished_fastmer.txt", wf=WORKFLOW),
+         canu_medaka_homopolish=expand("/data/{wf}_canu_d/Medaka/homopolish_output/consensus_canu_medaka_homopolished_fastmer.txt", wf=WORKFLOW),
          dir="/data/FastMer",
-         canu_medaka=expand("/data/{wf}_canu_d/Medaka/consensus.fasta.txt", wf=WORKFLOW)
+         canu_medaka=expand("/data/{wf}_canu_d/Medaka/consensus_canu_medaka_fastmer.txt", wf=WORKFLOW),
+         canu_racon_fastmer=expand("/data/{wf}_Racon/reads.racon2.fasta.txt", wf=WORKFLOW)
      shell:
          '''
-           cp {canu_homopolish} {racon_medaka_homopolish} {canu_medaka_homopolish} {canu_medaka}  /data/FastMer/
-           echo "Pipeline \'ex01\' complete."
+           cp {input.canu_fastmer} {input.dir}/canu.txt
+           cp {input.canu_homopolish} {input.dir}/canu_homopolish.txt
+           cp {input.canu_medaka} {input.dir}/canu_medaka.txt
+           cp {input.canu_medaka_homopolish} {input.dir}/canu_medaka_homopolish.txt
+           cp {input.canu_racon_fastmer} {input.dir}/canu_racon.txt
+           cp {input.racon_medaka_homopolish} {input.dir}/racon_medaka_homopolish.txt
+           ( echo -n -e "Methods\t"; cut -f 2-8  {input.dir}/canu.txt  | head -n 1 ) > {input.dir}/result.TXT
+           for i in {input.dir}/*.txt; do base=`basename \$i .txt`; echo -n ${{base}}; echo -n -e "\t";cut -f 2-8 $i | tail -n +2; done >> {input.dir}/result.TXT
+           echo "Pipeline \'MPXV_NanoPoreSeq\' complete."
          '''
 
 rule make_fastmer_dir:
@@ -77,6 +86,15 @@ rule assemble:
          canu -p {params.canu} -d {params.canu_d}  maxThreads=1 useGrid=false maxThreads=4 stopOnReadQuality=false genomeSize=200k minReadLength=500 -nanopore-raw {input}
         '''
 
+rule canu_fastmer:
+    input: assembly=expand("/data/{wf}_canu_d/{wf}_canu.contigs.fasta", wf=WORKFLOW),fasta=expand("/data/{ref}.fasta", ref=REF)
+    output: fastmer=expand("/data/{wf}_canu_d/{wf}_canu_fastmer.txt", wf=WORKFLOW)
+    shell:
+       '''
+        python2 /opt/FastMer/fastmer.py --reference {input.fasta} --assembly {input.assembly} > {output.fastmer}
+       '''
+
+
 rule canu_homopolish:
     input: expand("/data/{wf}_canu_d/{wf}_canu.contigs.fasta", wf=WORKFLOW)
     output:
@@ -108,7 +126,7 @@ rule canu_medaka:
        dir=expand("/data/{wf}_canu_d/Medaka/", wf=WORKFLOW)
     output:
        medaka=expand("/data/{wf}_canu_d/Medaka/consensus.fasta", wf=WORKFLOW),
-       fastmer=expand("/data/{wf}_canu_d/Medaka/consensus.fasta.txt", wf=WORKFLOW)
+       fastmer=expand("/data/{wf}_canu_d/Medaka/consensus_canu_medaka_fastmer.txt", wf=WORKFLOW)
     shell:
        '''
         medaka_consensus -i {input.reads} -d {input.assembly} -o {params.dir}
@@ -122,7 +140,7 @@ rule canu_medaka_homopolish:
     params:
        homopolish_dir=expand("/data/{wf}_canu_d/Medaka/homopolish_output", wf=WORKFLOW)
     output:
-       fastmer=expand("/data/{wf}_canu_d/Medaka/homopolish_output/consensus_homopolished.fasta.txt", wf=WORKFLOW)
+       fastmer=expand("/data/{wf}_canu_d/Medaka/homopolish_output/consensus_canu_medaka_homopolished_fastmer.txt", wf=WORKFLOW)
     shell:
        '''
        /opt/Conda/envs/homopolish/bin/python /opt/homopolish/homopolish.py polish -a {input.medakaconsensus} -s /opt/homopolish/virus.msh -m /opt/homopolish/R9.4.pkl -o {params.homopolish_dir}
@@ -140,7 +158,6 @@ rule canu_racon:
        expand("/data/{wf}_Racon/reads.racon2.fasta.txt", wf=WORKFLOW)
     shell:
       '''
-        # mkdir {params.racon_dir}
         minimap2 -x ava-ont -t 4 {input.nmnp_mapped} {input.nmnp_mapped} | gzip -1 > {params.racon_dir}/reads.paf.gz
         miniasm -f {input.nmnp_mapped} {params.racon_dir}/reads.paf.gz > {params.racon_dir}/reads.gfa
         awk '$1 ~/S/ {{print ">"$2"\\n"$3}}' {params.racon_dir}/reads.gfa > {params.racon_dir}/reads.fasta
@@ -159,10 +176,9 @@ rule canu_racon_medaka_homopolish:
    params:
      outdir=expand("/data/{wf}_RaconMedakaHomopolish", wf=WORKFLOW)
    output:
-     expand("/data/{wf}_RaconMedakaHomopolish/homopolish_output/consensus_homopolished.fasta.txt", wf=WORKFLOW)
+     expand("/data/{wf}_RaconMedakaHomopolish/homopolish_output/consensus_canu_racon_medaka_homopolished_fastmer.txt", wf=WORKFLOW)
    shell:
      '''
-       # mkdir {params.outdir}
        medaka_consensus -i {input.canu_trimmed_reads} -d {input.racon_assembly} -o {params.outdir}
        /opt/Conda/envs/homopolish/bin/python /opt/homopolish/homopolish.py polish -a {params.outdir}/consensus.fasta  -s /opt/homopolish/virus.msh -m /opt/homopolish/R9.4.pkl -o {params.outdir}/homopolish_output
        python2 /opt/FastMer/fastmer.py --reference {input.fasta}  --assembly {params.outdir}/homopolish_output/consensus_homopolished.fasta > {output}
