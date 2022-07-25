@@ -6,12 +6,17 @@ Vandenbogaert M, Kwasiborski A, Gonofio E, Descorps-Declère S, Selekon B, Nkili
 
 https://www.ncbi.nlm.nih.gov/pmc/articles/PMC9232561/
 
-# Installation & Usage
+## Installation & Usage
 
-## Installation
+### Installation
 Using Docker/Singularity.
 
-The provided Singularity file is illustrative of the dependency definitions.
+All conda/python dependencies are defined in accompanying dependency files:
+ - `conda_installed_packages_base.txt`
+ - `conda_installed_packages_homopolish.txt`
+ - `pip38_installed_packages.txt`
+
+The provided Singularity file is illustrative of the dependency definitions, and on building a target docker/singularity instance.
 
 ## Preparation of data
 
@@ -21,7 +26,7 @@ Input data is supposed to be basecalled, prior to using the provided snakemake f
 
 Example basecalling instructions (below instructions are uinsg Guppy v 3.2.4, and are indicative only):
 
-#### Using CPUs
+Example using CPUs:
 
 ```
 dir=/opt/Guppy/ont-guppy-cpu_3.4.4/ont-guppy-cpu/bin
@@ -30,7 +35,7 @@ ${dir}/guppy_basecaller --kit ${kit} --flowcell ${flowcell} --barcode_kits ${bar
 
 ```
 
-#### Using GPUs
+Example using GPUs:
 
 Works on Tesla P100 only.
 
@@ -50,10 +55,9 @@ ln ~/RawData/*.fastq .
 ln ~/NC_003310.fasta .
 ```
 
-## Execution
+### Execution
 
 ```
-singularity exec -B $PWD:/data/ -B /bioinfo/:/bioinfo/ -B /scratch/:/scratch/ -B MPXV_NanoPoreSeq:/pipeline/ minion_singularity_image.sif  bash -l
-
-snakemake -j10 -s /pipeline/Snakefile
+snakemake -j10 -s Snakefile
 ```
+
