@@ -52,5 +52,5 @@ wget https://raw.githubusercontent.com/jts/assembly_accuracy/master/fastmer.py
 ## conda
 echo "export PATH+=:/opt/Conda/bin/" | tee -a /environment
 ## canu 
-echo "export PATH+=:/opt/canu-1.8/Linux-amd64/bin/:/opt/FastANI/" | tee -a /etc/environment
+echo "export PATH+=:/opt/canu-1.8/Linux-amd64/bin/" | tee -a /etc/environment
 
