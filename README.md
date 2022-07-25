@@ -9,7 +9,8 @@ https://www.ncbi.nlm.nih.gov/pmc/articles/PMC9232561/
 # Installation & Usage
 
 ## Installation
-Using Docker/Singularity 
+Using Docker/Singularity.
+
 The provided Singularity file is illustrative of the dependency definitions.
 
 ## Preparation of data
