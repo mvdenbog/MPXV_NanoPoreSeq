@@ -61,3 +61,4 @@ ln ~/NC_003310.fasta .
 snakemake -j10 -s Snakefile
 ```
 
+Jupyter python/R notebooks for downstream analysis will be added shortly.
